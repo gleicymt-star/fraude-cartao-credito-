@@ -103,8 +103,8 @@ st.sidebar.markdown(f"**Equipe**  \nGleicy · Matheus · Renan · Victor")
 if cap == capitulos[0]:
     st.title("01 · O Problema")
     st.markdown(
-        "Fraude em cartão de crédito gera **prejuízos bilionários** todos os anos. "
-        "Detectar uma transação fraudulenta em tempo real — antes de o dano ser feito — "
+        "Fraudes em cartão de crédito geram **prejuízos bilionários** todos os anos. "
+        "Detectar uma transação fraudulenta em tempo real "
         "é um dos problemas mais críticos de Data Science aplicado ao mercado financeiro."
     )
 
@@ -136,13 +136,13 @@ if cap == capitulos[0]:
             "**Por que isso importa?**\n\n"
             "- Falso Negativo → fraude passa despercebida → prejuízo financeiro real\n"
             "- Falso Positivo → compra legítima bloqueada → cliente insatisfeito\n\n"
-            "O custo de um FN é ordens de magnitude maior que um FP. "
+            "O custo de um FN é maior que um FP. "
             "Por isso nossa métrica principal é o **Recall**, não a Acurácia."
         )
 
     st.info(
-        "💡 **Recall** = dos que eram fraude, quantos o modelo detectou? "
-        "É exatamente isso que queremos maximizar."
+        "**Recall** = dos que eram fraude, quantos o modelo detectou? "
+        "Queremos maximizar a detecção de fraudes."
     )
 
 # ─────────────────────────────────────────────────────────────────
@@ -212,14 +212,14 @@ elif cap == capitulos[1]:
     st.caption("Vermelho = correlação positiva (aumenta risco) · Azul = negativa (diminui risco)")
 
 # ─────────────────────────────────────────────────────────────────
-# CAPÍTULO 3 — O DESAFIO OCULTO
+# CAPÍTULO 3 — AJUSTANDO O DESBALANCEAMENTO
 # ─────────────────────────────────────────────────────────────────
 elif cap == capitulos[2]:
     st.title("03 · O Desafio Oculto")
     st.markdown(
-        "O maior inimigo desse projeto não é a complexidade do modelo — "
-        "é o **desbalanceamento extremo** dos dados. "
-        "Se ignorarmos isso, qualquer modelo vai parecer excelente e ser inútil."
+        "O maior problema encontrado do Dataset era"
+        "o **desbalanceamento extremo** dos dados. "
+        "Se isso fosse ignorado, qualquer modelo que usássemos pareceria ótimo."
     )
 
     st.markdown("---")
@@ -238,7 +238,7 @@ elif cap == capitulos[2]:
         st.pyplot(fig)
 
     with col2:
-        st.subheader("Por que acurácia é inútil aqui?")
+        st.subheader("Por que só considerar acurácia não funciona?")
         st.markdown("""
         Imagine um modelo que chuta **"legítima"** para **todas** as transações.
         """)
@@ -264,31 +264,7 @@ elif cap == capitulos[2]:
         col_b.metric("Fraudes no treino (depois)", f"{(y_test.shape[0]*4*394):,}+",
                      help="Valor aproximado após SMOTE")
 
-    st.markdown("---")
-    st.subheader("⚠️ A regra de ouro do SMOTE")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.error("""
-        **❌ Errado**
-        ```
-        Aplica SMOTE no dataset inteiro
-               ↓
-        Divide em treino e teste
-        ```
-        Fraudes sintéticas no teste = avaliação mentirosa
-        """)
-    with col2:
-        st.success("""
-        **✅ Correto**
-        ```
-        Divide em treino e teste primeiro
-               ↓
-        Aplica SMOTE só no treino
-        ```
-        Teste contém apenas fraudes reais
-        """)
-
+  
 # ─────────────────────────────────────────────────────────────────
 # CAPÍTULO 4 — OS MODELOS
 # ─────────────────────────────────────────────────────────────────
