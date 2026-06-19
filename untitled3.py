@@ -165,7 +165,7 @@ if cap == capitulos[0]:
             "**Por que isso importa?**\n\n"
             "- Falso Negativo → fraude passa → prejuízo financeiro real\n"
             "- Falso Positivo → compra bloqueada → cliente insatisfeito\n\n"
- 
+         )
 # ─────────────────────────────────────────────────────────────────
 # CAPÍTULO 2 — OS DADOS
 # ─────────────────────────────────────────────────────────────────
