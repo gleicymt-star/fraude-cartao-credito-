@@ -121,7 +121,7 @@ st.sidebar.markdown("---")
 capitulos = [
     "01 · O Problema",
     "02 · Os Dados",
-    "03 · O Desafio Oculto",
+    "03 · Ajustando o desbalanceamento",
     "04 · Os Modelos",
     "05 · Simulador ao Vivo",
 ]
@@ -135,8 +135,8 @@ st.sidebar.markdown("**Equipe**  \nGleicy · Matheus · Renan · Victor")
 if cap == capitulos[0]:
     st.title("01 · O Problema")
     st.markdown(
-        "Fraude em cartão de crédito gera **prejuízos bilionários** todos os anos. "
-        "Detectar uma transação fraudulenta em tempo real — antes de o dano ser feito — "
+        "Fraudes em cartão de crédito geram **prejuízos bilionários** todos os anos. "
+        "Detectar uma transação fraudulenta em tempo real"
         "é um dos problemas mais críticos de Data Science aplicado ao mercado financeiro."
     )
     st.markdown("---")
@@ -170,7 +170,7 @@ if cap == capitulos[0]:
         )
 
     st.info(
-        "💡 **Recall** = dos que eram fraude, quantos o modelo detectou? "
+        "**Recall** = das transações fraudulentas, quantos o modelo detectou? "
         "É exatamente isso que queremos maximizar."
     )
 
@@ -241,12 +241,12 @@ elif cap == capitulos[1]:
     st.caption("Vermelho = correlação positiva (aumenta risco) · Azul = negativa")
 
 # ─────────────────────────────────────────────────────────────────
-# CAPÍTULO 3 — O DESAFIO OCULTO
+# CAPÍTULO 3 — AJUSTANDO O DESBALANCEAMENTO
 # ─────────────────────────────────────────────────────────────────
 elif cap == capitulos[2]:
-    st.title("03 · O Desafio Oculto")
+    st.title("03 · Ajustando o desbalanceamento")
     st.markdown(
-        "O maior inimigo desse projeto não é a complexidade do modelo — "
+        "A maior barreira para o projeto"
         "é o **desbalanceamento extremo** dos dados."
     )
     st.markdown("---")
@@ -266,7 +266,7 @@ elif cap == capitulos[2]:
         plt.close()
 
     with col2:
-        st.subheader("Por que acurácia é inútil aqui?")
+        st.subheader("Por que acurácia não funciona aqui?")
         st.markdown("Imagine um modelo que chuta **legítima** para tudo:")
 
         col_a, col_b, col_c = st.columns(3)
@@ -287,29 +287,7 @@ elif cap == capitulos[2]:
         )
 
     st.markdown("---")
-    st.subheader("⚠️ A regra de ouro do SMOTE")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.error("""
-        **❌ Errado**
-        ```
-        Aplica SMOTE no dataset inteiro
-               ↓
-        Divide em treino e teste
-        ```
-        Fraudes sintéticas no teste = avaliação mentirosa
-        """)
-    with col2:
-        st.success("""
-        **✅ Correto**
-        ```
-        Divide em treino e teste primeiro
-               ↓
-        Aplica SMOTE só no treino
-        ```
-        Teste contém apenas fraudes reais
-        """)
+    
 
 # ─────────────────────────────────────────────────────────────────
 # CAPÍTULO 4 — OS MODELOS
