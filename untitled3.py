@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import kagglehub
 import os
 from sklearn.ensemble import RandomForestClassifier
@@ -24,8 +23,8 @@ st.set_page_config(
     layout="wide"
 )
 
-C0  = "#2563EB"   # azul legítima
-C1  = "#DC2626"   # vermelho fraude
+C0   = "#2563EB"
+C1   = "#DC2626"
 GRAY = "#64748B"
 
 plt.rcParams.update({
@@ -39,7 +38,7 @@ plt.rcParams.update({
 })
 
 # ─────────────────────────────────────────────────────────────────
-# DADOS E MODELO
+# DADOS E MODELO — com redução de memória
 # ─────────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def carregar_dados():
@@ -48,28 +47,62 @@ def carregar_dados():
         if arquivo.endswith(".csv"):
             df = pd.read_csv(os.path.join(caminho, arquivo))
             break
+
     df = df.drop_duplicates().reset_index(drop=True)
+
+    # ── CORREÇÃO 1: reduz para float32 (metade da memória do float64) ──
+    for col in df.select_dtypes(include="float64").columns:
+        df[col] = df[col].astype("float32")
+
     scaler = StandardScaler()
-    df["Amount_scaled"] = scaler.fit_transform(df[["Amount"]])
-    df["Time_scaled"]   = scaler.fit_transform(df[["Time"]])
+    df["Amount_scaled"] = scaler.fit_transform(df[["Amount"]]).astype("float32")
+    df["Time_scaled"]   = scaler.fit_transform(df[["Time"]]).astype("float32")
     df_modelo = df.drop(["Amount", "Time"], axis=1)
-    return df, df_modelo
+
+    # ── CORREÇÃO 2: usa 50% dos dados para treino ──────────────────
+    # Mantém TODAS as fraudes + amostra das legítimas
+    fraudes   = df_modelo[df_modelo["Class"] == 1]
+    legitimas = df_modelo[df_modelo["Class"] == 0].sample(
+        frac=0.5, random_state=42
+    )
+    df_modelo_leve = pd.concat([fraudes, legitimas]).sample(
+        frac=1, random_state=42
+    ).reset_index(drop=True)
+
+    return df, df_modelo_leve
 
 @st.cache_resource(show_spinner=False)
 def treinar(_df_modelo):
     X = _df_modelo.drop("Class", axis=1)
     y = _df_modelo["Class"]
+
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y)
-    smote = SMOTE(random_state=42)
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # ── CORREÇÃO 3: SMOTE com sampling_strategy=0.1 ────────────────
+    # cria fraudes até elas serem 10% do total — não 50%
+    # muito mais leve e ainda resolve o desbalanceamento
+    smote = SMOTE(random_state=42, sampling_strategy=0.1)
     X_tr_bal, y_tr_bal = smote.fit_resample(X_train, y_train)
+
+    # ── CORREÇÃO 4: 50 árvores e n_jobs=1 ─────────────────────────
+    # n_jobs=-1 usa todos os núcleos — no Cloud gratuito isso consome
+    # muita memória. n_jobs=1 é mais lento mas cabe no limite.
     lr = LogisticRegression(max_iter=1000, random_state=42)
     lr.fit(X_tr_bal, y_tr_bal)
-    rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+
+    rf = RandomForestClassifier(
+        n_estimators=50,
+        max_depth=10,       # limita profundidade das árvores — menos memória
+        random_state=42,
+        n_jobs=1
+    )
     rf.fit(X_tr_bal, y_tr_bal)
+
     return lr, rf, X_test, y_test
 
-with st.spinner("Carregando dados e treinando modelos..."):
+with st.spinner("Carregando dados e treinando modelos... (pode levar 1-2 min)"):
     df, df_modelo = carregar_dados()
     lr, rf, X_test, y_test = treinar(df_modelo)
 
@@ -93,9 +126,8 @@ capitulos = [
     "05 · Simulador ao Vivo",
 ]
 cap = st.sidebar.radio("Capítulos", capitulos)
-
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"**Equipe**  \nGleicy · Matheus · Renan · Victor")
+st.sidebar.markdown("**Equipe**  \nGleicy · Matheus · Renan · Victor")
 
 # ─────────────────────────────────────────────────────────────────
 # CAPÍTULO 1 — O PROBLEMA
@@ -103,11 +135,10 @@ st.sidebar.markdown(f"**Equipe**  \nGleicy · Matheus · Renan · Victor")
 if cap == capitulos[0]:
     st.title("01 · O Problema")
     st.markdown(
-        "Fraudes em cartão de crédito geram **prejuízos bilionários** todos os anos. "
-        "Detectar uma transação fraudulenta em tempo real "
+        "Fraude em cartão de crédito gera **prejuízos bilionários** todos os anos. "
+        "Detectar uma transação fraudulenta em tempo real — antes de o dano ser feito — "
         "é um dos problemas mais críticos de Data Science aplicado ao mercado financeiro."
     )
-
     st.markdown("---")
 
     col1, col2, col3 = st.columns(3)
@@ -117,7 +148,6 @@ if cap == capitulos[0]:
 
     st.markdown("---")
     st.subheader("O cenário")
-
     col1, col2 = st.columns(2)
 
     with col1:
@@ -130,19 +160,18 @@ if cap == capitulos[0]:
             "- `V1` a `V28` → componentes PCA (privacidade dos titulares)\n"
             "- `Class` → **0** = legítima · **1** = fraude"
         )
-
     with col2:
         st.markdown(
             "**Por que isso importa?**\n\n"
-            "- Falso Negativo → fraude passa despercebida → prejuízo financeiro real\n"
-            "- Falso Positivo → compra legítima bloqueada → cliente insatisfeito\n\n"
-            "O custo de um FN é maior que um FP. "
+            "- Falso Negativo → fraude passa → prejuízo financeiro real\n"
+            "- Falso Positivo → compra bloqueada → cliente insatisfeito\n\n"
+            "O custo de um FN é ordens de magnitude maior que um FP. "
             "Por isso nossa métrica principal é o **Recall**, não a Acurácia."
         )
 
     st.info(
-        "**Recall** = dos que eram fraude, quantos o modelo detectou? "
-        "Queremos maximizar a detecção de fraudes."
+        "💡 **Recall** = dos que eram fraude, quantos o modelo detectou? "
+        "É exatamente isso que queremos maximizar."
     )
 
 # ─────────────────────────────────────────────────────────────────
@@ -152,14 +181,12 @@ elif cap == capitulos[1]:
     st.title("02 · Os Dados")
     st.markdown(
         "Antes de qualquer modelo, precisamos entender como as transações "
-        "se distribuem no tempo e em valor — e se há padrões visuais entre "
-        "legítimas e fraudulentas."
+        "se distribuem no tempo e em valor."
     )
-
     st.markdown("---")
     st.subheader("Valor das transações ao longo do tempo")
 
-    legitimas = df[df["Class"] == 0].sample(5000, random_state=42)
+    legitimas = df[df["Class"] == 0].sample(3000, random_state=42)
     fraudes   = df[df["Class"] == 1]
 
     fig, ax = plt.subplots(figsize=(12, 4))
@@ -170,6 +197,7 @@ elif cap == capitulos[1]:
     ax.set_xlabel("Tempo (segundos)"); ax.set_ylabel("Valor (€)")
     ax.legend()
     st.pyplot(fig)
+    plt.close()
 
     st.markdown("---")
     col1, col2 = st.columns(2)
@@ -184,6 +212,7 @@ elif cap == capitulos[1]:
         ax2.set_xlabel("Valor (€)"); ax2.set_ylabel("Frequência")
         ax2.legend()
         st.pyplot(fig2)
+        plt.close()
 
     with col2:
         st.subheader("Estatísticas por classe")
@@ -191,11 +220,10 @@ elif cap == capitulos[1]:
         stats.index = ["Legítima", "Fraude"]
         stats.columns = ["Média (€)", "Mediana (€)", "Máximo (€)"]
         st.dataframe(stats, use_container_width=True)
-
         st.markdown("""
         **Observações:**
         - Fraudes tendem a ter valores medianos **menores**
-        - Possível padrão de "testes" com pequenas quantias antes de valores maiores
+        - Possível padrão de testes com pequenas quantias
         - Outliers de alto valor existem nas duas classes
         """)
 
@@ -207,22 +235,22 @@ elif cap == capitulos[1]:
     colors = [C1 if v > 0 else C0 for v in corr_top.values]
     corr_top.plot(kind="barh", ax=ax3, color=colors, edgecolor="white")
     ax3.axvline(0, color=GRAY, linewidth=0.8)
-    ax3.set_xlabel("Correlação de Pearson com Class")
+    ax3.set_xlabel("Correlação com Class")
     st.pyplot(fig3)
-    st.caption("Vermelho = correlação positiva (aumenta risco) · Azul = negativa (diminui risco)")
+    plt.close()
+    st.caption("Vermelho = correlação positiva (aumenta risco) · Azul = negativa")
 
 # ─────────────────────────────────────────────────────────────────
-# CAPÍTULO 3 — AJUSTANDO O DESBALANCEAMENTO
+# CAPÍTULO 3 — O DESAFIO OCULTO
 # ─────────────────────────────────────────────────────────────────
 elif cap == capitulos[2]:
     st.title("03 · O Desafio Oculto")
     st.markdown(
-        "O maior problema encontrado do Dataset era"
-        "o **desbalanceamento extremo** dos dados. "
-        "Se isso fosse ignorado, qualquer modelo que usássemos pareceria ótimo."
+        "O maior inimigo desse projeto não é a complexidade do modelo — "
+        "é o **desbalanceamento extremo** dos dados."
     )
-
     st.markdown("---")
+
     col1, col2 = st.columns([1, 2])
 
     with col1:
@@ -231,26 +259,25 @@ elif cap == capitulos[2]:
         contagem = df["Class"].value_counts()
         ax.pie(contagem.values,
                labels=["Legítima\n99.83%", "Fraude\n0.17%"],
-               colors=[C0, C1],
-               startangle=90,
+               colors=[C0, C1], startangle=90,
                wedgeprops=dict(edgecolor="white", linewidth=2))
         ax.set_title("Distribuição real")
         st.pyplot(fig)
+        plt.close()
 
     with col2:
-        st.subheader("Por que só considerar acurácia não funciona?")
-        st.markdown("""
-        Imagine um modelo que chuta **"legítima"** para **todas** as transações.
-        """)
+        st.subheader("Por que acurácia é inútil aqui?")
+        st.markdown("Imagine um modelo que chuta **legítima** para tudo:")
 
         col_a, col_b, col_c = st.columns(3)
-        col_a.metric("Acurácia", "99.83%", help="Parece ótimo...")
-        col_b.metric("Recall de Fraude", "0%", delta="-100%", delta_color="inverse")
+        col_a.metric("Acurácia", "99.83%")
+        col_b.metric("Recall de Fraude", "0%",
+                     delta="-100%", delta_color="inverse")
         col_c.metric("Fraudes detectadas", "0 de 492")
 
         st.error(
-            "Um modelo com 99.83% de acurácia que deixa **492 fraudes passarem**. "
-            "É por isso que acurácia não serve para datasets desbalanceados."
+            "99.83% de acurácia deixando **492 fraudes passarem**. "
+            "É por isso que acurácia não serve aqui."
         )
 
         st.markdown("**A solução: SMOTE**")
@@ -259,30 +286,43 @@ elif cap == capitulos[2]:
             "entre fraudes reais, balanceando o dataset de treino."
         )
 
-        col_a, col_b = st.columns(2)
-        col_a.metric("Fraudes no treino (antes)", "394")
-        col_b.metric("Fraudes no treino (depois)", f"{(y_test.shape[0]*4*394):,}+",
-                     help="Valor aproximado após SMOTE")
+    st.markdown("---")
+    st.subheader("⚠️ A regra de ouro do SMOTE")
 
-  
+    col1, col2 = st.columns(2)
+    with col1:
+        st.error("""
+        **❌ Errado**
+        ```
+        Aplica SMOTE no dataset inteiro
+               ↓
+        Divide em treino e teste
+        ```
+        Fraudes sintéticas no teste = avaliação mentirosa
+        """)
+    with col2:
+        st.success("""
+        **✅ Correto**
+        ```
+        Divide em treino e teste primeiro
+               ↓
+        Aplica SMOTE só no treino
+        ```
+        Teste contém apenas fraudes reais
+        """)
+
 # ─────────────────────────────────────────────────────────────────
 # CAPÍTULO 4 — OS MODELOS
 # ─────────────────────────────────────────────────────────────────
 elif cap == capitulos[3]:
     st.title("04 · Os Modelos")
     st.markdown(
-        "Treinamos dois modelos com SMOTE aplicado corretamente no treino. "
-        "Comparamos usando **Recall** como métrica principal e "
-        "**AUC-ROC** como métrica secundária."
+        "Treinamos dois modelos com SMOTE aplicado corretamente. "
+        "Métrica principal: **Recall**. Secundária: **AUC-ROC**."
     )
-
     st.markdown("---")
 
-    # ── Métricas comparativas ──────────────────────────────────────
-    st.subheader("Comparação geral")
-
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown("**Regressão Logística**")
         m1, m2, m3 = st.columns(3)
@@ -298,10 +338,8 @@ elif cap == capitulos[3]:
         m3.metric("AUC-ROC",  f"{roc_auc_score(y_test, y_proba_rf):.4f}")
 
     st.markdown("---")
-
     col1, col2 = st.columns(2)
 
-    # ── Matrizes de confusão ───────────────────────────────────────
     with col1:
         st.subheader("Matrizes de confusão")
         fig, axes = plt.subplots(1, 2, figsize=(10, 4))
@@ -311,7 +349,7 @@ elif cap == capitulos[3]:
             ["Regressão Logística", "Random Forest"]
         ):
             cm = confusion_matrix(y_test, y_pred)
-            im = ax.imshow(cm, cmap="Blues")
+            ax.imshow(cm, cmap="Blues")
             ax.set_xticks([0,1]); ax.set_yticks([0,1])
             ax.set_xticklabels(["Legítima","Fraude"])
             ax.set_yticklabels(["Legítima","Fraude"])
@@ -325,14 +363,14 @@ elif cap == capitulos[3]:
                             fontweight="bold", fontsize=13)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close()
 
         tn, fp, fn, tp = confusion_matrix(y_test, y_pred_rf).ravel()
         st.caption(
-            f"Random Forest → detectou **{tp} fraudes** · perdeu **{fn}** · "
-            f"gerou **{fp}** alarmes falsos"
+            f"Random Forest → detectou **{tp} fraudes** · "
+            f"perdeu **{fn}** · gerou **{fp}** alarmes falsos"
         )
 
-    # ── Curva Precisão x Recall ────────────────────────────────────
     with col2:
         st.subheader("Curva Precisão × Recall")
         fig2, ax2 = plt.subplots(figsize=(6, 4))
@@ -344,57 +382,51 @@ elif cap == capitulos[3]:
             ap = average_precision_score(y_test, y_proba)
             ax2.plot(rec, prec, color=cor, label=f"{nome} (AP={ap:.3f})")
         ax2.set_xlabel("Recall"); ax2.set_ylabel("Precisão")
-        ax2.set_title("Precisão × Recall")
         ax2.legend()
         st.pyplot(fig2)
-        st.caption(
-            "AP (Average Precision) resume a curva num único número. "
-            "Quanto maior, melhor."
-        )
+        plt.close()
+        st.caption("AP maior = modelo melhor")
 
     st.markdown("---")
     st.subheader("Importância das variáveis — Random Forest")
-    importances = pd.Series(rf.feature_importances_,
-                            index=X_test.columns).sort_values(ascending=True).tail(12)
+    importances = pd.Series(
+        rf.feature_importances_, index=X_test.columns
+    ).sort_values(ascending=True).tail(12)
     fig3, ax3 = plt.subplots(figsize=(8, 5))
     importances.plot(kind="barh", ax=ax3, color=C0, edgecolor="white")
-    ax3.set_title("Top 12 Variáveis — Random Forest")
     ax3.set_xlabel("Importância relativa")
     plt.tight_layout()
     st.pyplot(fig3)
+    plt.close()
 
 # ─────────────────────────────────────────────────────────────────
-# CAPÍTULO 5 — SIMULADOR AO VIVO
+# CAPÍTULO 5 — SIMULADOR
 # ─────────────────────────────────────────────────────────────────
 elif cap == capitulos[4]:
     st.title("05 · Simulador ao Vivo")
     st.markdown(
         "Ajuste o **limiar de decisão** e veja em tempo real como "
-        "Recall, Precisão e fraudes detectadas mudam. "
-        "Esse é o parâmetro que um time de risco ajustaria conforme o apetite do negócio."
+        "Recall, Precisão e fraudes detectadas mudam."
     )
-
     st.markdown("---")
 
     threshold = st.slider(
-        "Limiar de decisão (quanto menor, mais sensível a fraudes)",
+        "Limiar de decisão (menor = mais sensível a fraudes)",
         min_value=0.05, max_value=0.95, value=0.50, step=0.01
     )
 
     y_pred_sim = (y_proba_rf >= threshold).astype(int)
     rec  = recall_score(y_test, y_pred_sim)
     prec = precision_score(y_test, y_pred_sim)
-    auc  = roc_auc_score(y_test, y_proba_rf)
     det  = int(round(rec * y_test.sum()))
     perd = int(y_test.sum()) - det
-    fp_n = int(y_pred_sim.sum()) - det
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Recall",            f"{rec:.2%}")
-    col2.metric("Precisão",          f"{prec:.2%}")
+    col1.metric("Recall",             f"{rec:.2%}")
+    col2.metric("Precisão",           f"{prec:.2%}")
     col3.metric("Fraudes detectadas", f"{det} / {int(y_test.sum())}")
     col4.metric("Fraudes perdidas",   perd,
-                delta=f"-{perd}" if perd < int(y_test.sum()) else None,
+                delta=f"-{perd}" if perd > 0 else None,
                 delta_color="inverse")
 
     st.markdown("---")
@@ -417,6 +449,7 @@ elif cap == capitulos[4]:
                         fontweight="bold", fontsize=14)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close()
 
     with col2:
         st.subheader("Precisão × Recall no limiar atual")
@@ -425,15 +458,17 @@ elif cap == capitulos[4]:
         ax2.plot(threshs, precs[:-1], color=C0, label="Precisão")
         ax2.plot(threshs, recs[:-1],  color=C1, label="Recall")
         ax2.axvline(threshold, color=GRAY, linestyle="--",
-                    label=f"Limiar atual ({threshold:.2f})")
+                    label=f"Limiar ({threshold:.2f})")
         ax2.set_xlabel("Limiar"); ax2.set_ylabel("Score")
         ax2.legend()
         st.pyplot(fig2)
+        plt.close()
 
     st.markdown("---")
     st.subheader("Relatório completo")
-    st.text(classification_report(y_test, y_pred_sim,
-            target_names=["Legítima", "Fraude"]))
+    st.text(classification_report(
+        y_test, y_pred_sim, target_names=["Legítima", "Fraude"]
+    ))
 
     if perd == 0:
         st.success("🎯 Todas as fraudes detectadas com esse limiar!")
