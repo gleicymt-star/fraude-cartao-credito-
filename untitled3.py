@@ -135,9 +135,9 @@ st.sidebar.markdown("**Equipe**  \nGleicy · Matheus · Renan · Victor")
 if cap == capitulos[0]:
     st.title("01 · O Problema")
     st.markdown(
-        "Fraudes em cartão de crédito geram **prejuízos bilionários** todos os anos. "
-        "Detectar uma transação fraudulenta em tempo real"
-        "é um dos problemas mais críticos de Data Science aplicado ao mercado financeiro."
+        "Detectar fraudes é um exercício de equilíbrio. "
+        "Nosso objetivo é maximizar a captura de fraudes reais (Recall) estritamente dentro de um limite tolerável de atrito com o cliente (Precisão)."
+        "Bloqueios indevidos geram insatisfação e altos custos de suporte."
     )
     st.markdown("---")
 
@@ -165,15 +165,7 @@ if cap == capitulos[0]:
             "**Por que isso importa?**\n\n"
             "- Falso Negativo → fraude passa → prejuízo financeiro real\n"
             "- Falso Positivo → compra bloqueada → cliente insatisfeito\n\n"
-            "O custo de um FN é ordens de magnitude maior que um FP. "
-            "Por isso nossa métrica principal é o **Recall**, não a Acurácia."
-        )
-
-    st.info(
-        "**Recall** = das transações fraudulentas, quantos o modelo detectou? "
-        "É exatamente isso que queremos maximizar."
-    )
-
+ 
 # ─────────────────────────────────────────────────────────────────
 # CAPÍTULO 2 — OS DADOS
 # ─────────────────────────────────────────────────────────────────
@@ -246,7 +238,7 @@ elif cap == capitulos[1]:
 elif cap == capitulos[2]:
     st.title("03 · Ajustando o desbalanceamento")
     st.markdown(
-        "A maior barreira para o projeto"
+        "A maior barreira para o projeto "
         "é o **desbalanceamento extremo** dos dados."
     )
     st.markdown("---")
@@ -277,7 +269,7 @@ elif cap == capitulos[2]:
 
         st.error(
             "99.83% de acurácia deixando **492 fraudes passarem**. "
-            "É por isso que acurácia não serve aqui."
+          
         )
 
         st.markdown("**A solução: SMOTE**")
