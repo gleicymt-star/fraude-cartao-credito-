@@ -230,7 +230,7 @@ elif cap == capitulos[1]:
     df_hora["hora"] = df_hora["hora"].astype(int)
    
   
-    st.markdown("**Taxa de fraude por hora (%)**")
+st.markdown("**Taxa de fraude por hora (%)**")
 
 taxa_por_hora = df_hora.groupby("hora")["Class"].mean() * 100
 
