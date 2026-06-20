@@ -251,6 +251,7 @@ elif cap == capitulos[1]:
             f"🔺 Pico de fraude às **{hora_pico}h**, com "
             f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
         )
+        st.markdown("---")
 
     st.markdown("---")
     st.subheader("Top 10 variáveis correlacionadas com fraude")
