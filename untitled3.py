@@ -218,6 +218,57 @@ elif cap == capitulos[1]:
         - Possível padrão de testes com pequenas quantias
         - Outliers de alto valor existem nas duas classes
         """)
+      
+    st.markdown("---")
+    st.subheader("Em que hora do dia as fraudes acontecem mais?")
+ 
+    # Time está em segundos desde a primeira transação.
+    # % 86400 pega o "resto" da divisão por um dia inteiro em segundos,
+    # ou seja, traz o valor de volta para dentro de um único dia.
+    # Dividir por 3600 converte segundos em horas.
+    df_hora = df.copy()
+    df_hora["hora"] = (df_hora["Time"] % 86400) / 3600
+    df_hora["hora"] = df_hora["hora"].astype(int)
+ 
+    col1, col2 = st.columns(2)
+ 
+    with col1:
+        st.markdown("**Volume de transações por hora**")
+        fig_h1, ax_h1 = plt.subplots(figsize=(6, 3.5))
+        legit_hora = df_hora[df_hora["Class"] == 0]["hora"]
+        fraude_hora = df_hora[df_hora["Class"] == 1]["hora"]
+        ax_h1.hist(legit_hora, bins=24, range=(0,24), alpha=0.6,
+                   color=C0, label="Legítima", edgecolor="white", density=True)
+        ax_h1.hist(fraude_hora, bins=24, range=(0,24), alpha=0.85,
+                   color=C1, label="Fraude", edgecolor="white", density=True)
+        ax_h1.set_xlabel("Hora do dia"); ax_h1.set_ylabel("Densidade")
+        ax_h1.legend()
+        st.pyplot(fig_h1)
+        plt.close()
+        st.caption("Densidade normalizada — compara o *formato* da distribuição, não o volume bruto")
+ 
+    with col2:
+        st.markdown("**Taxa de fraude por hora (%)**")
+        # groupby agrupa por hora, .mean() na coluna Class dá a proporção
+        # de fraude naquela hora (já que Class só tem 0 e 1)
+        taxa_por_hora = df_hora.groupby("hora")["Class"].mean() * 100
+ 
+        fig_h2, ax_h2 = plt.subplots(figsize=(6, 3.5))
+        cores = [C1 if v > taxa_por_hora.mean() else C0 for v in taxa_por_hora.values]
+        ax_h2.bar(taxa_por_hora.index, taxa_por_hora.values,
+                  color=cores, edgecolor="white")
+        ax_h2.axhline(taxa_por_hora.mean(), color=GRAY, linestyle="--",
+                      linewidth=1, label=f"Média ({taxa_por_hora.mean():.2f}%)")
+        ax_h2.set_xlabel("Hora do dia"); ax_h2.set_ylabel("% de fraude")
+        ax_h2.legend()
+        st.pyplot(fig_h2)
+        plt.close()
+ 
+        hora_pico = taxa_por_hora.idxmax()
+        st.caption(
+            f"🔺 Pico de fraude às **{hora_pico}h**, com "
+            f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
+        )
 
     st.markdown("---")
     st.subheader("Top 10 variáveis correlacionadas com fraude")
