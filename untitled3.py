@@ -221,36 +221,35 @@ elif cap == capitulos[1]:
       
     st.markdown("---")
     st.subheader("Em que hora do dia as fraudes acontecem mais?")
-      # Time está em segundos desde a primeira transação.
+    # Time está em segundos desde a primeira transação.
     # % 86400 pega o "resto" da divisão por um dia inteiro em segundos,
     # ou seja, traz o valor de volta para dentro de um único dia.
     # Dividir por 3600 converte segundos em horas.
     df_hora = df.copy()
     df_hora["hora"] = (df_hora["Time"] % 86400) / 3600
     df_hora["hora"] = df_hora["hora"].astype(int)
-   
-  
-st.markdown("**Taxa de fraude por hora (%)**")
 
-taxa_por_hora = df_hora.groupby("hora")["Class"].mean() * 100
+    st.markdown("**Taxa de fraude por hora (%)**")
 
-fig_h2, ax_h2 = plt.subplots(figsize=(6, 3.5))
-cores = [C1 if v > taxa_por_hora.mean() else C0 for v in taxa_por_hora.values]
-ax_h2.bar(taxa_por_hora.index, taxa_por_hora.values,
-          color=cores, edgecolor="white")
-ax_h2.axhline(taxa_por_hora.mean(), color=GRAY, linestyle="--",
-              linewidth=1, label=f"Média ({taxa_por_hora.mean():.2f}%)")
-ax_h2.set_xlabel("Hora do dia"); ax_h2.set_ylabel("% de fraude")
-ax_h2.legend()
-st.pyplot(fig_h2)
-plt.close()
+    taxa_por_hora = df_hora.groupby("hora")["Class"].mean() * 100
 
-hora_pico = taxa_por_hora.idxmax()
-st.caption(
-    f"🔺 Pico de fraude às **{hora_pico}h**, com "
-    f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
-)
-     
+    fig_h2, ax_h2 = plt.subplots(figsize=(6, 3.5))
+    cores = [C1 if v > taxa_por_hora.mean() else C0 for v in taxa_por_hora.values]
+    ax_h2.bar(taxa_por_hora.index, taxa_por_hora.values,
+              color=cores, edgecolor="white")
+    ax_h2.axhline(taxa_por_hora.mean(), color=GRAY, linestyle="--",
+                  linewidth=1, label=f"Média ({taxa_por_hora.mean():.2f}%)")
+    ax_h2.set_xlabel("Hora do dia"); ax_h2.set_ylabel("% de fraude")
+    ax_h2.legend()
+    st.pyplot(fig_h2)
+    plt.close()
+
+    hora_pico = taxa_por_hora.idxmax()
+    st.caption(
+        f"🔺 Pico de fraude às **{hora_pico}h**, com "
+        f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
+    )
+
     st.markdown("---")
     st.subheader("Top 10 variáveis correlacionadas com fraude")
     corr = df_modelo.corr(numeric_only=True)["Class"].drop("Class")
