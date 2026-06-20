@@ -221,6 +221,13 @@ elif cap == capitulos[1]:
       
     st.markdown("---")
     st.subheader("Em que hora do dia as fraudes acontecem mais?")
+      # Time está em segundos desde a primeira transação.
+    # % 86400 pega o "resto" da divisão por um dia inteiro em segundos,
+    # ou seja, traz o valor de volta para dentro de um único dia.
+    # Dividir por 3600 converte segundos em horas.
+    df_hora = df.copy()
+    df_hora["hora"] = (df_hora["Time"] % 86400) / 3600
+    df_hora["hora"] = df_hora["hora"].astype(int)
    
     with col1:
         st.markdown("**Taxa de fraude por hora (%)**")
