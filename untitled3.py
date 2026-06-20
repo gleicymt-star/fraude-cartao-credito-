@@ -230,24 +230,10 @@ elif cap == capitulos[1]:
     df_hora["hora"] = (df_hora["Time"] % 86400) / 3600
     df_hora["hora"] = df_hora["hora"].astype(int)
  
-    col1, col2 = st.columns(2)
+    col1= st.columns(1)
+ 
  
     with col1:
-        st.markdown("**Volume de transações por hora**")
-        fig_h1, ax_h1 = plt.subplots(figsize=(6, 3.5))
-        legit_hora = df_hora[df_hora["Class"] == 0]["hora"]
-        fraude_hora = df_hora[df_hora["Class"] == 1]["hora"]
-        ax_h1.hist(legit_hora, bins=24, range=(0,24), alpha=0.6,
-                   color=C0, label="Legítima", edgecolor="white", density=True)
-        ax_h1.hist(fraude_hora, bins=24, range=(0,24), alpha=0.85,
-                   color=C1, label="Fraude", edgecolor="white", density=True)
-        ax_h1.set_xlabel("Hora do dia"); ax_h1.set_ylabel("Densidade")
-        ax_h1.legend()
-        st.pyplot(fig_h1)
-        plt.close()
-        st.caption("Densidade normalizada — compara o *formato* da distribuição, não o volume bruto")
- 
-    with col2:
         st.markdown("**Taxa de fraude por hora (%)**")
         # groupby agrupa por hora, .mean() na coluna Class dá a proporção
         # de fraude naquela hora (já que Class só tem 0 e 1)
