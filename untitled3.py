@@ -250,7 +250,7 @@ st.caption(
     f"🔺 Pico de fraude às **{hora_pico}h**, com "
     f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
 )
-     S
+     
     st.markdown("---")
     st.subheader("Top 10 variáveis correlacionadas com fraude")
     corr = df_modelo.corr(numeric_only=True)["Class"].drop("Class")
