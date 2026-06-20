@@ -229,30 +229,28 @@ elif cap == capitulos[1]:
     df_hora["hora"] = (df_hora["Time"] % 86400) / 3600
     df_hora["hora"] = df_hora["hora"].astype(int)
    
-    with col1:
-        st.markdown("**Taxa de fraude por hora (%)**")
-        # groupby agrupa por hora, .mean() na coluna Class dá a proporção
-        # de fraude naquela hora (já que Class só tem 0 e 1)
-        taxa_por_hora = df_hora.groupby("hora")["Class"].mean() * 100
- 
-        fig_h2, ax_h2 = plt.subplots(figsize=(6, 3.5))
-        cores = [C1 if v > taxa_por_hora.mean() else C0 for v in taxa_por_hora.values]
-        ax_h2.bar(taxa_por_hora.index, taxa_por_hora.values,
-                  color=cores, edgecolor="white")
-        ax_h2.axhline(taxa_por_hora.mean(), color=GRAY, linestyle="--",
-                      linewidth=1, label=f"Média ({taxa_por_hora.mean():.2f}%)")
-        ax_h2.set_xlabel("Hora do dia"); ax_h2.set_ylabel("% de fraude")
-        ax_h2.legend()
-        st.pyplot(fig_h2)
-        plt.close()
- 
-        hora_pico = taxa_por_hora.idxmax()
-        st.caption(
-            f"🔺 Pico de fraude às **{hora_pico}h**, com "
-            f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
-        )
-        st.markdown("---")
+  
+    st.markdown("**Taxa de fraude por hora (%)**")
 
+taxa_por_hora = df_hora.groupby("hora")["Class"].mean() * 100
+
+fig_h2, ax_h2 = plt.subplots(figsize=(6, 3.5))
+cores = [C1 if v > taxa_por_hora.mean() else C0 for v in taxa_por_hora.values]
+ax_h2.bar(taxa_por_hora.index, taxa_por_hora.values,
+          color=cores, edgecolor="white")
+ax_h2.axhline(taxa_por_hora.mean(), color=GRAY, linestyle="--",
+              linewidth=1, label=f"Média ({taxa_por_hora.mean():.2f}%)")
+ax_h2.set_xlabel("Hora do dia"); ax_h2.set_ylabel("% de fraude")
+ax_h2.legend()
+st.pyplot(fig_h2)
+plt.close()
+
+hora_pico = taxa_por_hora.idxmax()
+st.caption(
+    f"🔺 Pico de fraude às **{hora_pico}h**, com "
+    f"**{taxa_por_hora.max():.2f}%** de taxa de fraude"
+)
+     S
     st.markdown("---")
     st.subheader("Top 10 variáveis correlacionadas com fraude")
     corr = df_modelo.corr(numeric_only=True)["Class"].drop("Class")
